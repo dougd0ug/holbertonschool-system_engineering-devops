@@ -1,0 +1,82 @@
+Infrastructure Design
+User request flow
+
+A user opens their browser and enters www.foobar.com.
+
+The DNS system resolves www.foobar.com → A record → server IP 8.8.8.8.
+
+The request is sent via HTTP/HTTPS to the server.
+
+Nginx (web server) receives the request.
+
+If it’s static content (HTML, CSS, JS, images), Nginx serves it directly.
+
+If it’s dynamic content (PHP, Python, etc.), Nginx forwards the request to the application server.
+
+The application server processes business logic (e.g., PHP-FPM, Gunicorn, or uWSGI depending on the stack).
+
+The application server queries the MySQL database if needed.
+
+The database returns data → application server builds the response → Nginx sends it back to the user.
+
+Components
+
+Domain name (foobar.com)
+
+Human-readable identifier pointing to the server’s IP.
+
+Configured with a DNS A record for www.foobar.com → 8.8.8.8.
+
+Server
+
+A physical or virtual machine that runs the whole infrastructure.
+
+Contains all layers: web server, application server, code base, and database.
+
+Web server (Nginx)
+
+Handles HTTP(S) requests from clients.
+
+Serves static files and acts as a reverse proxy to the application server.
+
+Application server
+
+Runs the application code (your codebase).
+
+Processes logic, routes requests, interacts with the database.
+
+Application files (code base)
+
+The website logic (HTML, CSS, JS, Python/PHP/Ruby/Node.js code).
+
+Deployed and executed by the application server.
+
+Database (MySQL)
+
+Stores structured data (e.g., users, products, posts).
+
+Queried by the application server to fetch and update information.
+
+Communication
+
+User’s computer ↔ server via HTTP/HTTPS (port 80/443).
+
+Web server ↔ application server via local sockets or TCP.
+
+Application server ↔ MySQL via local TCP connection or socket.
+
+Problems with this Infrastructure
+
+SPOF (Single Point of Failure)
+
+If the server goes down, the entire website becomes unavailable.
+
+Downtime during maintenance
+
+Restarting Nginx, deploying new code, or updating the DB requires downtime → users cannot access the service during this period.
+
+Scalability issues
+
+Only one server handles all traffic.
+
+If too many users connect at the same time → the server becomes overloaded and performance drops or crashes.
