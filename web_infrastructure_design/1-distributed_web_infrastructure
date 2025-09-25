@@ -1,0 +1,93 @@
+                    Internet
+                       |
+                       v
+                +-----------------+
+                |   HAProxy LB    |   <-- public IP (www.foobar.com -> A record -> LB IP)
+                |  (health checks)|
+                +--------+--------+
+                         |
+              round-robin/leastconn (with health checks)
+         +---------------+----------------+
+         |                                |
+         v                                v
+ +----------------+               +----------------+
+ | Server A       |               | Server B       |
+ | (app node #1)  |               | (app node #2)  |
+ |----------------|               |----------------|
+ | Nginx (web)    |               | Nginx (web)    |
+ | Application    |               | Application    |
+ | (app codebase) |               | (app codebase) |
+ | DB (MySQL)     |               | DB (MySQL replica) |
+ | (Primary)      |               | (Replica)      |
+ +----------------+               +----------------+
+         ^                                ^
+         |                                |
+         +---------- async/sync ----------+
+                  DB replication
+Why each element is added
+
+- HAProxy (load balancer) — distributes incoming requests across multiple backends for horizontal scalability and better availability (if one server fails the LB will stop sending traffic to it).
+
+- Two application servers (Server A + Server B) — allow:
+
+horizontal scaling of the web/application tier,
+
+redundancy (if one goes down the other continues),
+
+rolling deployments with reduced downtime.
+
+- Nginx on each server (web server / reverse proxy) — serves static files fast and terminates client connections; can also act as reverse proxy to the application process (e.g., uWSGI/Gunicorn/PHP-FPM).
+
+- Application server (same machine) — runs business logic, handles sessions, talks to the DB.
+
+- Application files on each server — each server has the codebase so any backend can serve any request (stateless deployment).
+
+- MySQL Primary + Replica — Primary accepts writes, Replica is synchronised for read scaling and redundancy (can be promoted on failure).
+
+Load balancer distribution algorithm (example: round-robin or leastconn)
+
+- Round-robin: LB sends requests in turn to each healthy backend (A → B → A → B). Simple and fair when backends have similar capacity.
+
+- Least connections: LB sends the request to the backend with the fewest active connections. Better when backend request durations vary.
+
+How it works in HAProxy:
+
+- HAProxy keeps health checks (HTTP or TCP) to mark backends as UP or DOWN.
+
+- LB calculates the algorithm (round-robin / leastconn) and forwards incoming connections to healthy backends.
+
+- It rewrites or preserves headers (e.g., X-Forwarded-For).
+
+Active-Active:
+
+- Both Server A and Server B actively serve traffic.
+
+- LB distributes requests between them (load sharing).
+
+- Pros: better resource utilization, true scaling.
+
+- Cons: must ensure statelessness or centralize session storage (or use sticky sessions with care).
+
+Active-Passive:
+
+- Only one server (active) serves traffic; the other is idle standby.
+
+- Standby is promoted if active fails.
+
+- Pros: simpler (no session-sharing), easier to reason about.
+
+- Cons: underutilized resources; no load distribution.
+
+Advantages:
+
+- Load distribution, redundancy, read scaling.
+
+Issues:
+
+- SPOFs: HAProxy (only one), Primary DB.
+
+- Security: no firewall, no HTTPS.
+
+- No monitoring: can’t detect failures proactively.
+
+- Maintenance downtime: restarting services → impact.
