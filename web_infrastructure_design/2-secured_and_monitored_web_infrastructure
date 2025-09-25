@@ -1,0 +1,56 @@
+                         Internet
+                            |
+                        DNS (A record www.foobar.com -> LB IP)
+                            |
+                         Edge FW (Firewall #1)
+                            |
+                       +------------+
+                       |  HAProxy   |   <-- SSL terminated (cert for www.foobar.com)
+                       |  (LB w/ TLS)
+                       +------------+
+                         /        \
+                App FW (Firewall #2)  App FW (Firewall #2)
+                   (subnet ACLs)         (subnet ACLs)
+                  /                        \
+        +----------------+          +----------------+
+        | Server A       |          | Server B       |
+        | - Nginx        |          | - Nginx        |
+        | - App process  |          | - App process  |
+        | - Host FW (FW3)|          | - Host FW (FW3)|
+        | - Metrics agent|          | - Metrics agent|
+        +----------------+          +----------------+
+                 \                         /
+                  \                       /
+                    +-------------------+
+                    |   Server C (DB)   |
+                    |   MySQL Primary   |
+                    |   Host FW (FW3)   |
+                    |   Metrics / logs  |
+                    +-------------------+
+
+Monitoring collectors (on each server):
+ - Metrics agent (Prometheus node_exporter or datadog-agent)
+ - Logs forwarder (Filebeat/Fluentd → SumoLogic/ELK)
+ - Tracing/APM agent (OpenTelemetry/Datadog tracer)
+
+All monitoring agents push or expose data to a central monitoring service (SumoLogic/Prometheus/Grafana).
+
+Key points
+
+- Firewalls (3 layers) → edge, subnet, host → defense in depth.
+
+- HTTPS (SSL cert) → secure, encrypted client ↔ LB traffic.
+
+- Monitoring agents (metrics, logs, traces) → installed on all servers, send data to collector (e.g., SumoLogic).
+
+Monitoring
+
+- Collect QPS = requests/sec from Nginx metrics or access logs → dashboard.
+
+Issues
+
+- SSL terminated at LB → backend unencrypted → fix with end-to-end TLS.
+
+- 1 MySQL Primary → SPOF for writes → fix with replicas + failover.
+
+- All roles on same servers → resource contention & blast radius → fix by splitting roles.
