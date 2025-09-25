@@ -1,0 +1,29 @@
+Application Server vs Web Server
+
+Infrastructure
+
+- 1 Load Balancer (HAProxy) → distributes traffic between servers, cluster-enabled for redundancy.
+
+- 1 Web Server → handles HTTP/S requests, serves static content.
+
+- 1 Application Server → runs business logic, processes requests from web server.
+
+- 1 Database Server (MySQL) → stores persistent data, separate from web/app servers.
+
+Why Split Components
+
+- Separation of concerns → easier maintenance & debugging.
+
+- Scalability → you can scale web servers and app servers independently.
+
+- Fault isolation → one server failure doesn’t take down entire stack.
+
+- Security → database isolated, restricted access.
+
+Key Points
+
+- HAProxy distributes requests using round-robin or least connections.
+
+- Web server is first entry point; app server executes logic; database stores/retrieves data.
+
+- Each server can be monitored separately.
